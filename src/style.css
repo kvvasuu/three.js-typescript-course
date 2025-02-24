@@ -2,3 +2,26 @@ body {
   overflow: hidden;
   margin: 0px;
 }
+
+#stats {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+}
+
+.hide {
+  display: none;
+}
+#hide-ui {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  padding: 0.5rem 1rem;
+  background-color: rgb(245, 114, 53);
+  font-weight: 900;
+  font-size: 2rem;
+  border: none;
+  border-top-right-radius: 1rem;
+  z-index: 10;
+}
