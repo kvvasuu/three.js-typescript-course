@@ -18,10 +18,19 @@ body {
   bottom: 0;
   left: 0;
   padding: 0.5rem 1rem;
-  background-color: rgb(245, 114, 53);
+  background-color: rgb(93, 195, 212);
   font-weight: 900;
-  font-size: 2rem;
+  font-size: 1rem;
   border: none;
   border-top-right-radius: 1rem;
   z-index: 10;
+  transition: all 300ms;
+}
+
+#hide-ui.hide {
+  display: block;
+  opacity: 0.1;
+}
+#hide-ui.hide:hover {
+  opacity: 1;
 }

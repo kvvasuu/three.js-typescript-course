@@ -17,7 +17,7 @@ sceneC.background = new THREE.CubeTextureLoader()
   .setPath("https://sbcode.net/img/")
   .load(["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"]);
 
-let activeScene = sceneA;
+let activeScene = sceneC;
 const setScene = {
   sceneA: () => {
     activeScene = sceneA;
@@ -31,7 +31,7 @@ const setScene = {
 };
 
 const camera = new THREE.PerspectiveCamera(
-  75,
+  110,
   window.innerWidth / window.innerHeight,
   0.1,
   1000
@@ -58,7 +58,10 @@ const cubeA = new THREE.Mesh(
   new THREE.MeshNormalMaterial({ wireframe: true })
 );
 const cubeB = new THREE.Mesh(geometry, material);
-const cubeC = new THREE.Mesh(geometry, material);
+const torus = new THREE.Mesh(
+  new THREE.TorusKnotGeometry(0.5, 0.2, 256, 32),
+  new THREE.MeshNormalMaterial()
+);
 
 const statsDiv = document.getElementById("stats");
 
@@ -68,26 +71,66 @@ statsDiv?.appendChild(stats.dom);
 const gui = new GUI();
 sceneA.add(cubeA);
 sceneB.add(cubeB);
-sceneC.add(cubeC);
+sceneC.add(torus);
 
-gui.add(setScene, "sceneA").name("Scene A");
-gui.add(setScene, "sceneB").name("Scene B");
-gui.add(setScene, "sceneC").name("Scene C");
+const animation = {
+  toggleAnimation: (): void => {
+    isZoomingAnimation = !isZoomingAnimation;
+  },
+};
+
+const sceneFolder = gui.addFolder("Scene");
+sceneFolder.add(animation, "toggleAnimation").name("Toggle animation");
+sceneFolder.add(setScene, "sceneA").name("Cube A");
+sceneFolder.add(setScene, "sceneB").name("Cube B");
+sceneFolder.add(setScene, "sceneC").name("Torus");
+sceneFolder.open();
+
+const cameraFolder = gui.addFolder("Camera");
+cameraFolder.add(camera.position, "x", -10, 10);
+cameraFolder.add(camera.position, "y", -10, 10);
+cameraFolder.add(camera.position, "z", -10, 10);
+cameraFolder.add(camera, "fov", 0, 180, 0.01).onChange(() => {
+  camera.updateProjectionMatrix();
+});
+cameraFolder.add(camera, "aspect", 0.00001, 10).onChange(() => {
+  camera.updateProjectionMatrix();
+});
+cameraFolder.add(camera, "near", 0.01, 10).onChange(() => {
+  camera.updateProjectionMatrix();
+});
+cameraFolder.add(camera, "far", 0.01, 10).onChange(() => {
+  camera.updateProjectionMatrix();
+});
+cameraFolder.open();
 
 let isZooming = false;
+let isZoomingAnimation = true;
 
 function animate() {
   requestAnimationFrame(animate);
 
   renderer.render(activeScene, camera);
 
-  cubeC.rotation.x += 0.01;
-  cubeC.rotation.y += 0.01;
-
-  if (isZooming) {
-    camera.position.z <= 2 ? (isZooming = false) : (camera.position.z -= 0.01);
-  } else {
-    camera.position.z >= 5 ? (isZooming = true) : (camera.position.z += 0.01);
+  torus.rotation.x += 0.01;
+  torus.rotation.y += 0.01;
+  if (isZoomingAnimation) {
+    if (isZooming) {
+      if (camera.position.z <= 2) {
+        isZooming = false;
+      } else {
+        camera.position.z -= 0.01;
+        camera.fov += 0.3;
+      }
+    } else {
+      if (camera.position.z >= 5) {
+        isZooming = true;
+      } else {
+        camera.position.z += 0.01;
+        camera.fov -= 0.3;
+      }
+    }
+    camera.updateProjectionMatrix();
   }
 
   gui.updateDisplay();
@@ -102,12 +145,14 @@ let isUIVisible = true;
 const toggleUI = () => {
   if (isUIVisible) {
     gui.hide();
-    statsDiv?.classList.add("hide");
     isUIVisible = false;
+    statsDiv?.classList.add("hide");
+    hideButton?.classList.add("hide");
   } else {
     gui.show();
-    statsDiv?.classList.remove("hide");
     isUIVisible = true;
+    statsDiv?.classList.remove("hide");
+    hideButton?.classList.remove("hide");
   }
 };
 
