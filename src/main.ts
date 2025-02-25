@@ -1,34 +1,14 @@
 import "./style.css";
 import * as THREE from "three";
-//import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import Stats from "three/addons/libs/stats.module.js";
 import { GUI } from "dat.gui";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-const sceneA = new THREE.Scene();
-sceneA.background = new THREE.Color(0x123456);
-
-const sceneB = new THREE.Scene();
-sceneB.background = new THREE.TextureLoader().load(
-  "https://sbcode.net/img/grid.png"
-);
-
-const sceneC = new THREE.Scene();
-sceneC.background = new THREE.CubeTextureLoader()
+const scene = new THREE.Scene();
+scene.background = new THREE.CubeTextureLoader()
   .setPath("https://sbcode.net/img/")
   .load(["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"]);
-
-let activeScene = sceneC;
-const setScene = {
-  sceneA: () => {
-    activeScene = sceneA;
-  },
-  sceneB: () => {
-    activeScene = sceneB;
-  },
-  sceneC: () => {
-    activeScene = sceneC;
-  },
-};
 
 const camera = new THREE.PerspectiveCamera(
   110,
@@ -48,20 +28,43 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-/* new OrbitControls(camera, renderer.domElement); */
+new OrbitControls(camera, renderer.domElement);
 
-const geometry = new THREE.BoxGeometry();
-const material = new THREE.MeshNormalMaterial();
-
-const cubeA = new THREE.Mesh(
-  geometry,
-  new THREE.MeshNormalMaterial({ wireframe: true })
-);
-const cubeB = new THREE.Mesh(geometry, material);
 const torus = new THREE.Mesh(
   new THREE.TorusKnotGeometry(0.5, 0.2, 256, 32),
   new THREE.MeshNormalMaterial()
 );
+
+const loader = new GLTFLoader();
+
+loader.load(
+  "/models/porsche/scene.gltf",
+  function (gltf) {
+    scene.add(gltf.scene);
+  },
+  undefined,
+  function (error) {
+    console.error(error);
+  }
+);
+
+const light = new THREE.AmbientLight(0x404040, 50);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 30);
+const spotLight = new THREE.SpotLight(0xffffff);
+spotLight.position.set(100, 1000, 100);
+
+spotLight.castShadow = true;
+
+spotLight.shadow.mapSize.width = 1024;
+spotLight.shadow.mapSize.height = 1024;
+
+spotLight.shadow.camera.near = 500;
+spotLight.shadow.camera.far = 4000;
+spotLight.shadow.camera.fov = 30;
+
+scene.add(spotLight);
+scene.add(directionalLight);
+scene.add(light);
 
 const statsDiv = document.getElementById("stats");
 
@@ -69,9 +72,8 @@ const stats = new Stats();
 statsDiv?.appendChild(stats.dom);
 
 const gui = new GUI();
-sceneA.add(cubeA);
-sceneB.add(cubeB);
-sceneC.add(torus);
+
+/* scene.add(torus); */
 
 const animation = {
   toggleAnimation: (): void => {
@@ -81,9 +83,6 @@ const animation = {
 
 const sceneFolder = gui.addFolder("Scene");
 sceneFolder.add(animation, "toggleAnimation").name("Toggle animation");
-sceneFolder.add(setScene, "sceneA").name("Cube A");
-sceneFolder.add(setScene, "sceneB").name("Cube B");
-sceneFolder.add(setScene, "sceneC").name("Torus");
 sceneFolder.open();
 
 const cameraFolder = gui.addFolder("Camera");
@@ -105,12 +104,12 @@ cameraFolder.add(camera, "far", 0.01, 10).onChange(() => {
 cameraFolder.open();
 
 let isZooming = false;
-let isZoomingAnimation = true;
+let isZoomingAnimation = false;
 
 function animate() {
   requestAnimationFrame(animate);
 
-  renderer.render(activeScene, camera);
+  renderer.render(scene, camera);
 
   torus.rotation.x += 0.01;
   torus.rotation.y += 0.01;
