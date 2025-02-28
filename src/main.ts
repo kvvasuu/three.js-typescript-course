@@ -37,10 +37,13 @@ const torus = new THREE.Mesh(
 
 const loader = new GLTFLoader();
 
+let model: any = null;
+
 loader.load(
   "/models/porsche/scene.gltf",
   function (gltf) {
-    scene.add(gltf.scene);
+    model = gltf.scene;
+    scene.add(model);
   },
   undefined,
   function (error) {
@@ -79,11 +82,23 @@ const animation = {
   toggleAnimation: (): void => {
     isZoomingAnimation = !isZoomingAnimation;
   },
+  toggleRotation: (): void => {
+    isRotating = !isRotating;
+  },
 };
+
+let params = { rotationSpeed: 0.01 };
 
 const sceneFolder = gui.addFolder("Scene");
 sceneFolder.add(animation, "toggleAnimation").name("Toggle animation");
 sceneFolder.open();
+
+const rotationFolder = gui.addFolder("Rotation");
+rotationFolder.add(animation, "toggleRotation").name("Toggle rotation");
+rotationFolder
+  .add(params, "rotationSpeed", 0, 0.1, 0.001)
+  .name("Rotation Speed");
+rotationFolder.open();
 
 const cameraFolder = gui.addFolder("Camera");
 cameraFolder.add(camera.position, "x", -10, 10);
@@ -105,6 +120,8 @@ cameraFolder.open();
 
 let isZooming = false;
 let isZoomingAnimation = false;
+
+let isRotating = false;
 
 function animate() {
   requestAnimationFrame(animate);
@@ -130,6 +147,10 @@ function animate() {
       }
     }
     camera.updateProjectionMatrix();
+  }
+
+  if (model && isRotating) {
+    model.rotation.y += params.rotationSpeed;
   }
 
   gui.updateDisplay();
