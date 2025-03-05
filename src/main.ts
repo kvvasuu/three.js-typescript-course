@@ -200,9 +200,9 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(0, 2, 3);
 
-const renderer = new THREE.WebGLRenderer();
+const canvas = document.getElementById("canvas") as HTMLCanvasElement;
+const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
 
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
