@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { GUI } from "dat.gui";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import arrangePalettes from "./utils";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 const hideButton = document.getElementById("hide-ui");
 let isUIVisible = true;
@@ -110,6 +111,23 @@ const colors = [
 
 const allPallets = new THREE.Group();
 
+let palletModel: any = null;
+
+const loader = new GLTFLoader();
+
+loader.load(
+  "/models/layler/paleta.glb",
+  function (gltf) {
+    const model = gltf.scene;
+    palletModel = model.children[0];
+    createPalletObjects();
+  },
+  undefined,
+  function (error) {
+    console.error(error);
+  }
+);
+
 const createPalletObjects = () => {
   allPallets.remove(...allPallets.children);
 
@@ -120,40 +138,43 @@ const createPalletObjects = () => {
   );
 
   positions.forEach((pos, index) => {
-    const geometry = new THREE.BoxGeometry(
-      data.palletWidth - 0.02,
-      data.palletHeight,
-      data.palletLength - 0.02
-    );
+    if (palletModel) {
+      palletModel.width = data.palletWidth - 0.02;
+      palletModel.length = data.palletLength - 0.02;
 
-    const material = new THREE.MeshPhysicalMaterial({
-      color: colors[index % colors.length],
-      roughness: 0.5,
-    });
+      palletModel.scale.x = data.palletWidth / 0.8 - 0.02;
+      palletModel.scale.z = data.palletLength / 1.2 - 0.02;
 
-    const pallet = new THREE.Mesh(
-      new THREE.BoxGeometry(
+      palletModel.position.set(pos.x, pos.y + 0.046, pos.z);
+      palletModel.material = new THREE.MeshPhysicalMaterial({
+        color: "#85560c",
+      });
+
+      const material = new THREE.MeshPhysicalMaterial({
+        color: colors[index % colors.length],
+        roughness: 0.5,
+      });
+
+      const geometry = new THREE.BoxGeometry(
         data.palletWidth - 0.02,
-        0.1,
+        data.palletHeight,
         data.palletLength - 0.02
-      ),
-      new THREE.MeshPhysicalMaterial({ color: "#85560c" })
-    );
-    pallet.position.set(pos.x, pos.y + 0.05, pos.z);
+      );
 
-    const palletContent = new THREE.Mesh(geometry, material);
-    palletContent.position.set(
-      pos.x,
-      pos.y + data.palletHeight / 2 + 0.1,
-      pos.z
-    );
-    palletContent.name = `pallet_${index + 1}`;
+      const palletContent = new THREE.Mesh(geometry, material);
+      palletContent.position.set(
+        pos.x,
+        pos.y + data.palletHeight / 2 + 0.1,
+        pos.z
+      );
+      palletContent.name = `pallet_${index + 1}`;
 
-    const wholePallet = new THREE.Group();
-    wholePallet.add(pallet);
-    wholePallet.add(palletContent);
-    allPallets.add(wholePallet);
-    scene.add(allPallets);
+      const wholePallet = new THREE.Group();
+      wholePallet.add(palletModel.clone());
+      wholePallet.add(palletContent);
+      allPallets.add(wholePallet);
+      scene.add(allPallets);
+    }
   });
 };
 
@@ -165,12 +186,12 @@ palletFolder.add(data, "palletNumber", 1, 100, 1).onChange(() => {
   data.changePalletQuantity();
   createPalletObjects();
 });
-palletFolder.add(data, "palletWidth", 0.2, 2.6, 0.1).onChange((number) => {
+palletFolder.add(data, "palletWidth", 0.4, 2.5, 0.1).onChange((number) => {
   data.changePalletWidth(number);
 
   createPalletObjects();
 });
-palletFolder.add(data, "palletLength", 0.2, 2.6, 0.1).onChange((number) => {
+palletFolder.add(data, "palletLength", 0.4, 2.5, 0.1).onChange((number) => {
   data.changePalletLength(number);
   createPalletObjects();
 });
@@ -187,8 +208,6 @@ controls.update();
 
 const light = new THREE.AmbientLight(0x404040, 50);
 scene.add(light);
-
-createPalletObjects();
 
 function animate() {
   requestAnimationFrame(animate);
