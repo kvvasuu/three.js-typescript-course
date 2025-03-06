@@ -1,6 +1,6 @@
 import "./style.css";
 import * as THREE from "three";
-import Stats from "three/addons/libs/stats.module.js";
+
 import { GUI } from "dat.gui";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import arrangePalettes from "./utils";
@@ -8,18 +8,14 @@ import arrangePalettes from "./utils";
 const hideButton = document.getElementById("hide-ui");
 let isUIVisible = true;
 
-const statsDiv = document.getElementById("stats");
-
 const toggleUI = () => {
   if (isUIVisible) {
     gui.hide();
     isUIVisible = false;
-    statsDiv?.classList.add("hide");
     hideButton?.classList.add("hide");
   } else {
     gui.show();
     isUIVisible = true;
-    statsDiv?.classList.remove("hide");
     hideButton?.classList.remove("hide");
   }
 };
@@ -58,36 +54,42 @@ window.addEventListener("mouseup", () => {
 });
 
 const data = {
-  floorSize: { width: 2.6, length: 13.6 },
-  palletSize: { width: 0.8, length: 1.2 },
+  floorSize: { width: 2.5, length: 13.6 },
+  palletNumber: 2,
+  palletWidth: 0.8,
+  palletLength: 1.2,
+  palletHeight: 1.2,
+  palettes: [
+    { width: 0.8, length: 1.2 },
+    { width: 0.8, length: 1.2 },
+  ],
+  changePalletQuantity: function () {
+    this.palettes = Array.from({ length: this.palletNumber }, () => {
+      return { width: this.palletWidth, length: this.palletLength };
+    });
+  },
+  changePalletWidth: function (width: number) {
+    this.palletWidth = width;
+    this.changePalletQuantity();
+  },
+  changePalletLength: function (length: number) {
+    this.palletLength = length;
+    this.changePalletQuantity();
+  },
+  changePalletHeight: function (height: number) {
+    this.palletHeight = height;
+    this.changePalletQuantity();
+  },
 };
-
-const palettes = [
-  { width: 0.8, length: 1.2 },
-  { width: 0.8, length: 1.2 },
-  { width: 0.8, length: 1.2 },
-  { width: 0.8, length: 1.2 },
-  { width: 0.8, length: 1.2 },
-  { width: 0.8, length: 1.2 },
-  { width: 0.8, length: 1.2 },
-  { width: 0.8, length: 1.2 },
-  { width: 0.8, length: 1.2 },
-  { width: 0.8, length: 1.2 },
-];
-
-const positions = arrangePalettes(
-  data.floorSize.width,
-  data.floorSize.length,
-  palettes
-);
 
 const floor = new THREE.Mesh(
   new THREE.PlaneGeometry(data.floorSize.width, data.floorSize.length),
   new THREE.MeshPhysicalMaterial({ color: "#e3975b", roughness: 0.5 })
 );
+floor.name = "floor";
 floor.rotation.x = THREE.MathUtils.degToRad(-90);
 floor.position.z = 6.8;
-floor.position.x = 1.3;
+floor.position.x = data.floorSize.width / 2;
 scene.add(floor);
 
 camera.position.set(-5, 5, 6.8);
@@ -106,60 +108,78 @@ const colors = [
   "#fa5f8d",
 ];
 
-positions.forEach((pos, index) => {
-  const geometry = new THREE.BoxGeometry(
-    data.palletSize.width - 0.02,
-    0.6,
-    data.palletSize.length - 0.02
+const allPallets = new THREE.Group();
+
+const createPalletObjects = () => {
+  allPallets.remove(...allPallets.children);
+
+  const positions = arrangePalettes(
+    data.floorSize.width,
+    data.floorSize.length,
+    data.palettes
   );
 
-  const material = new THREE.MeshPhysicalMaterial({
-    color: colors[index % colors.length],
-    roughness: 0.5,
+  positions.forEach((pos, index) => {
+    const geometry = new THREE.BoxGeometry(
+      data.palletWidth - 0.02,
+      data.palletHeight,
+      data.palletLength - 0.02
+    );
+
+    const material = new THREE.MeshPhysicalMaterial({
+      color: colors[index % colors.length],
+      roughness: 0.5,
+    });
+
+    const pallet = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        data.palletWidth - 0.02,
+        0.1,
+        data.palletLength - 0.02
+      ),
+      new THREE.MeshPhysicalMaterial({ color: "#85560c" })
+    );
+    pallet.position.set(pos.x, pos.y + 0.05, pos.z);
+
+    const palletContent = new THREE.Mesh(geometry, material);
+    palletContent.position.set(
+      pos.x,
+      pos.y + data.palletHeight / 2 + 0.1,
+      pos.z
+    );
+    palletContent.name = `pallet_${index + 1}`;
+
+    const wholePallet = new THREE.Group();
+    wholePallet.add(pallet);
+    wholePallet.add(palletContent);
+    allPallets.add(wholePallet);
+    scene.add(allPallets);
   });
-
-  const pallet = new THREE.Mesh(
-    new THREE.BoxGeometry(
-      data.palletSize.width - 0.02,
-      0.1,
-      data.palletSize.length - 0.02
-    ),
-    new THREE.MeshPhysicalMaterial({ color: "#85560c" })
-  );
-  pallet.position.set(pos.x, pos.y + 0.05, pos.z);
-
-  const palletContent = new THREE.Mesh(geometry, material);
-  palletContent.position.set(pos.x, pos.y + 0.4, pos.z);
-
-  const wholePallet = new THREE.Group();
-  wholePallet.add(pallet);
-  wholePallet.add(palletContent);
-  scene.add(wholePallet);
-});
-
-const stats = new Stats();
-statsDiv?.appendChild(stats.dom);
+};
 
 const gui = new GUI();
 
-const cameraFolder = gui.addFolder("Camera");
-cameraFolder.add(camera.position, "x", -10, 10);
-cameraFolder.add(camera.position, "y", -10, 10);
-cameraFolder.add(camera.position, "z", -10, 10);
-cameraFolder.add(camera, "fov", 0, 180, 0.01).onChange(() => {
-  camera.updateProjectionMatrix();
+const palletFolder = gui.addFolder("Pallets");
+
+palletFolder.add(data, "palletNumber", 1, 100, 1).onChange(() => {
+  data.changePalletQuantity();
+  createPalletObjects();
 });
-cameraFolder.add(camera, "aspect", 0.00001, 10).onChange(() => {
-  camera.updateProjectionMatrix();
+palletFolder.add(data, "palletWidth", 0.2, 2.6, 0.1).onChange((number) => {
+  data.changePalletWidth(number);
+
+  createPalletObjects();
 });
-cameraFolder.add(camera, "near", 0.01, 10).onChange(() => {
-  camera.updateProjectionMatrix();
+palletFolder.add(data, "palletLength", 0.2, 2.6, 0.1).onChange((number) => {
+  data.changePalletLength(number);
+  createPalletObjects();
 });
-cameraFolder.add(camera, "far", 0.01, 10).onChange(() => {
-  camera.updateProjectionMatrix();
+palletFolder.add(data, "palletHeight", 0.2, 2, 0.1).onChange((number) => {
+  data.changePalletHeight(number);
+  createPalletObjects();
 });
 
-cameraFolder.open();
+palletFolder.open();
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.copy(floor.position);
@@ -168,13 +188,92 @@ controls.update();
 const light = new THREE.AmbientLight(0x404040, 50);
 scene.add(light);
 
+createPalletObjects();
+
 function animate() {
   requestAnimationFrame(animate);
 
   renderer.render(scene, camera);
   controls.update();
-
-  stats.update();
 }
 
 animate();
+
+const raycaster = new THREE.Raycaster();
+
+document.addEventListener("mousedown", (event: MouseEvent) => {
+  const coords = new THREE.Vector2(
+    (event.clientX / renderer.domElement.clientWidth) * 2 - 1,
+    -((event.clientY / renderer.domElement.clientHeight) * 2 - 1)
+  );
+
+  raycaster.setFromCamera(coords, camera);
+
+  const intersections = raycaster.intersectObjects(allPallets.children, true);
+  if (intersections.length > 0) {
+    const selectedObject = intersections[0].object;
+
+    if (selectedObject instanceof THREE.Mesh) {
+      let randomColor = new THREE.Color(
+        Math.random(),
+        Math.random(),
+        Math.random()
+      );
+
+      if (selectedObject.name.includes("pallet")) {
+        const existingDialog = document.getElementById("custom-dialog");
+        if (existingDialog) {
+          existingDialog.remove();
+        }
+
+        const boundingBox = new THREE.Box3().setFromObject(selectedObject);
+        const size = new THREE.Vector3();
+        boundingBox.getSize(size);
+
+        const dialog = document.createElement("div");
+        dialog.id = "custom-dialog";
+        dialog.innerHTML = `
+            <p class="pallet-name"><strong>${selectedObject.name
+              .replace("_", " ")
+              .toUpperCase()}</strong></p>
+            <p><strong>Width: </strong>${Math.round(size.x * 10) / 10}</p>
+            <p><strong>Length: </strong>${Math.round(size.y * 10) / 10}</p>
+            
+        `;
+        dialog.classList.add("pallet-dialog");
+        dialog.style.backgroundColor = `#${selectedObject.material.color.getHexString()}`;
+        dialog.style.position = "absolute";
+        dialog.style.left = `${event.clientX}px`;
+        dialog.style.top = `${event.clientY}px`;
+
+        const button = document.createElement("button");
+        button.id = "change-pallet-color";
+        button.textContent = "Change color";
+        button.style.backgroundColor = `#${randomColor.getHexString()}`;
+        button.addEventListener("click", () => {
+          selectedObject.material.color = randomColor;
+          randomColor = new THREE.Color(
+            Math.random(),
+            Math.random(),
+            Math.random()
+          );
+          button.style.backgroundColor = `#${randomColor.getHexString()}`;
+          dialog.style.backgroundColor = `#${selectedObject.material.color.getHexString()}`;
+        });
+        dialog.appendChild(button);
+        document.body.appendChild(dialog);
+
+        const closeDialog = (e: MouseEvent) => {
+          if (!dialog.contains(e.target as Node)) {
+            dialog.remove();
+            document.removeEventListener("click", closeDialog);
+          }
+        };
+
+        setTimeout(() => {
+          document.addEventListener("click", closeDialog);
+        }, 100);
+      }
+    }
+  }
+});
