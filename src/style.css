@@ -38,3 +38,7 @@ body {
 canvas {
   cursor: grab;
 }
+
+.grabbing {
+  cursor: grabbing;
+}
