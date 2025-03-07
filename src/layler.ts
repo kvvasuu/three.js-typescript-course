@@ -24,6 +24,11 @@ const toggleUI = () => {
 hideButton?.addEventListener("click", toggleUI);
 
 const scene = new THREE.Scene();
+scene.background = new THREE.CubeTextureLoader()
+  .setPath("https://sbcode.net/img/")
+  .load(["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"]);
+scene.backgroundBlurriness = 0.1;
+
 const grid = new THREE.GridHelper(30, 30);
 grid.position.z = 6.8;
 grid.position.y = -0.01;
@@ -39,6 +44,8 @@ const camera = new THREE.PerspectiveCamera(
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -81,6 +88,11 @@ const data = {
     this.palletHeight = height;
     this.changePalletQuantity();
   },
+  isWireframe: false,
+  toggleWireframe: function () {
+    this.isWireframe = !this.isWireframe;
+    createPalletObjects();
+  },
 };
 
 const floor = new THREE.Mesh(
@@ -91,6 +103,7 @@ floor.name = "floor";
 floor.rotation.x = THREE.MathUtils.degToRad(-90);
 floor.position.z = 6.8;
 floor.position.x = data.floorSize.width / 2;
+floor.receiveShadow = true;
 scene.add(floor);
 
 camera.position.set(-5, 5, 6.8);
@@ -149,10 +162,13 @@ const createPalletObjects = () => {
       palletModel.material = new THREE.MeshPhysicalMaterial({
         color: "#85560c",
       });
+      palletModel.castShadow = true;
+      palletModel.receiveShadow = true;
 
       const material = new THREE.MeshPhysicalMaterial({
         color: colors[index % colors.length],
         roughness: 0.5,
+        wireframe: data.isWireframe,
       });
 
       const geometry = new THREE.BoxGeometry(
@@ -168,6 +184,9 @@ const createPalletObjects = () => {
         pos.z
       );
       palletContent.name = `pallet_${index + 1}`;
+
+      palletContent.castShadow = !data.isWireframe;
+      palletContent.receiveShadow = !data.isWireframe;
 
       const wholePallet = new THREE.Group();
       wholePallet.add(palletModel.clone());
@@ -199,15 +218,28 @@ palletFolder.add(data, "palletHeight", 0.2, 2, 0.1).onChange((number) => {
   data.changePalletHeight(number);
   createPalletObjects();
 });
+palletFolder.add(data, "toggleWireframe");
 
 palletFolder.open();
 
 const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
 controls.target.copy(floor.position);
 controls.update();
 
-const light = new THREE.AmbientLight(0x404040, 50);
-scene.add(light);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 4);
+directionalLight.position.z = -2;
+directionalLight.position.x = -2;
+
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 4096;
+directionalLight.shadow.mapSize.height = 4096;
+directionalLight.shadow.camera.near = 0.5;
+directionalLight.shadow.camera.far = 500;
+scene.add(directionalLight);
+
+const ambientLight = new THREE.AmbientLight(0xffe7c2);
+scene.add(ambientLight);
 
 function animate() {
   requestAnimationFrame(animate);
