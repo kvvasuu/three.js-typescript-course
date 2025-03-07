@@ -1,10 +1,10 @@
 import "./style.css";
 import * as THREE from "three";
-
-import { GUI } from "dat.gui";
+import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import arrangePalettes from "./utils";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 
 const hideButton = document.getElementById("hide-ui");
 let isUIVisible = true;
@@ -24,10 +24,21 @@ const toggleUI = () => {
 hideButton?.addEventListener("click", toggleUI);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.CubeTextureLoader()
-  .setPath("https://sbcode.net/img/")
-  .load(["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"]);
-scene.backgroundBlurriness = 0.1;
+
+const hdr = "https://sbcode.net/img/spruit_sunrise_1k.hdr";
+
+let environmentTexture: THREE.DataTexture;
+
+new RGBELoader().load(hdr, (texture) => {
+  environmentTexture = texture;
+  environmentTexture.mapping = THREE.EquirectangularReflectionMapping;
+  scene.environment = environmentTexture;
+  scene.background = environmentTexture;
+  scene.environmentRotation = new THREE.Euler(0, 160, 0);
+  scene.backgroundRotation = new THREE.Euler(0, 160, 0);
+  scene.backgroundBlurriness = 0.1;
+  scene.environmentIntensity = 0.2; // added in Three r163
+});
 
 const grid = new THREE.GridHelper(30, 30);
 grid.position.z = 6.8;
@@ -93,11 +104,16 @@ const data = {
     this.isWireframe = !this.isWireframe;
     createPalletObjects();
   },
+  isVisible: true,
+  toggleVisible: function () {
+    this.isVisible = !this.isVisible;
+    createPalletObjects();
+  },
 };
 
 const floor = new THREE.Mesh(
   new THREE.PlaneGeometry(data.floorSize.width, data.floorSize.length),
-  new THREE.MeshPhysicalMaterial({ color: "#e3975b", roughness: 0.5 })
+  new THREE.MeshStandardMaterial({ color: "#e3975b", roughness: 0.5 })
 );
 floor.name = "floor";
 floor.rotation.x = THREE.MathUtils.degToRad(-90);
@@ -159,13 +175,13 @@ const createPalletObjects = () => {
       palletModel.scale.z = data.palletLength / 1.2 - 0.02;
 
       palletModel.position.set(pos.x, pos.y + 0.046, pos.z);
-      palletModel.material = new THREE.MeshPhysicalMaterial({
+      palletModel.material = new THREE.MeshStandardMaterial({
         color: "#85560c",
       });
       palletModel.castShadow = true;
       palletModel.receiveShadow = true;
 
-      const material = new THREE.MeshPhysicalMaterial({
+      const material = new THREE.MeshStandardMaterial({
         color: colors[index % colors.length],
         roughness: 0.5,
         wireframe: data.isWireframe,
@@ -187,6 +203,7 @@ const createPalletObjects = () => {
 
       palletContent.castShadow = !data.isWireframe;
       palletContent.receiveShadow = !data.isWireframe;
+      palletContent.visible = data.isVisible;
 
       const wholePallet = new THREE.Group();
       wholePallet.add(palletModel.clone());
@@ -201,26 +218,37 @@ const gui = new GUI();
 
 const palletFolder = gui.addFolder("Pallets");
 
-palletFolder.add(data, "palletNumber", 1, 100, 1).onChange(() => {
-  data.changePalletQuantity();
-  createPalletObjects();
-});
-palletFolder.add(data, "palletWidth", 0.4, 2.5, 0.1).onChange((number) => {
-  data.changePalletWidth(number);
+palletFolder
+  .add(data, "palletNumber", 1, 100, 1)
+  .name("Pallets number")
+  .onChange(() => {
+    data.changePalletQuantity();
+    createPalletObjects();
+  });
+palletFolder
+  .add(data, "palletWidth", 0.4, 2.5, 0.1)
+  .name("Pallets width")
+  .onChange((number) => {
+    data.changePalletWidth(number);
 
-  createPalletObjects();
-});
-palletFolder.add(data, "palletLength", 0.4, 2.5, 0.1).onChange((number) => {
-  data.changePalletLength(number);
-  createPalletObjects();
-});
-palletFolder.add(data, "palletHeight", 0.2, 2, 0.1).onChange((number) => {
-  data.changePalletHeight(number);
-  createPalletObjects();
-});
-palletFolder.add(data, "toggleWireframe");
-
-palletFolder.open();
+    createPalletObjects();
+  });
+palletFolder
+  .add(data, "palletLength", 0.4, 2.5, 0.1)
+  .name("Pallets length")
+  .onChange((number) => {
+    data.changePalletLength(number);
+    createPalletObjects();
+  });
+palletFolder
+  .add(data, "palletHeight", 0.2, 2, 0.1)
+  .name("Pallets height")
+  .onChange((number) => {
+    data.changePalletHeight(number);
+    createPalletObjects();
+  });
+palletFolder.add(data, "toggleWireframe").name("Toggle wireframe");
+palletFolder.add(data, "toggleVisible").name("Toggle visibility");
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -237,9 +265,6 @@ directionalLight.shadow.mapSize.height = 4096;
 directionalLight.shadow.camera.near = 0.5;
 directionalLight.shadow.camera.far = 500;
 scene.add(directionalLight);
-
-const ambientLight = new THREE.AmbientLight(0xffe7c2);
-scene.add(ambientLight);
 
 function animate() {
   requestAnimationFrame(animate);
@@ -271,7 +296,7 @@ document.addEventListener("mousedown", (event: MouseEvent) => {
         Math.random()
       );
 
-      if (selectedObject.name.includes("pallet")) {
+      if (selectedObject.name.includes("pallet") && selectedObject.visible) {
         const existingDialog = document.getElementById("custom-dialog");
         if (existingDialog) {
           existingDialog.remove();
