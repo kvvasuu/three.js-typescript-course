@@ -5,6 +5,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import arrangePalettes from "./utils";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+import hdr from "/img/zwartkops_pit_1k.hdr";
 
 const hideButton = document.getElementById("hide-ui");
 let isUIVisible = true;
@@ -25,8 +26,6 @@ hideButton?.addEventListener("click", toggleUI);
 
 const scene = new THREE.Scene();
 
-const hdr = "https://sbcode.net/img/spruit_sunrise_1k.hdr";
-
 let environmentTexture: THREE.DataTexture;
 
 new RGBELoader().load(hdr, (texture) => {
@@ -36,8 +35,8 @@ new RGBELoader().load(hdr, (texture) => {
   scene.background = environmentTexture;
   scene.environmentRotation = new THREE.Euler(0, 160, 0);
   scene.backgroundRotation = new THREE.Euler(0, 160, 0);
-  scene.backgroundBlurriness = 0.1;
-  scene.environmentIntensity = 0.2; // added in Three r163
+  scene.backgroundBlurriness = 0.06;
+  scene.environmentIntensity = 0.2;
 });
 
 const grid = new THREE.GridHelper(30, 30);
