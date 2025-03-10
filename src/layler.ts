@@ -1,5 +1,6 @@
 import "./style.css";
 import * as THREE from "three";
+import { Pallet } from "./utils";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import arrangePalettes from "./utils";
@@ -72,52 +73,70 @@ window.addEventListener("mouseup", () => {
 });
 
 const data = {
-  floorSize: { width: 2.5, length: 13.6 },
-  palletNumber: 2,
+  trailerWidth: 2.5,
+  trailerLength: 13.6,
+  palletNumber: 1,
   palletWidth: 0.8,
   palletLength: 1.2,
-  palletHeight: 1.2,
-  palettes: [
-    { width: 0.8, length: 1.2 },
-    { width: 0.8, length: 1.2 },
-  ],
-  changePalletQuantity: function () {
-    this.palettes = Array.from({ length: this.palletNumber }, () => {
-      return { width: this.palletWidth, length: this.palletLength };
-    });
+  palletHeight: 0.6,
+  pallets: [new Pallet()],
+  updatePalletQuantity: function () {
+    let palletsToArrange: Pallet[] = [];
+
+    if (this.palletNumber === this.pallets.length) {
+      palletsToArrange = [...this.pallets];
+    } else if (this.palletNumber < this.pallets.length) {
+      palletsToArrange = [...this.pallets].splice(0, this.palletNumber);
+    } else {
+      const palletsToAdd = Array.from(
+        { length: this.palletNumber - this.pallets.length },
+        () => {
+          return new Pallet(
+            this.palletWidth,
+            this.palletLength,
+            this.palletHeight
+          );
+        }
+      );
+
+      palletsToArrange = [...[...this.pallets], ...palletsToAdd];
+    }
+    this.pallets = arrangePalettes(
+      this.trailerWidth,
+      this.trailerLength,
+      palletsToArrange
+    );
   },
   changePalletWidth: function (width: number) {
     this.palletWidth = width;
-    this.changePalletQuantity();
+    this.pallets.forEach((pallet) => (pallet.width = width));
   },
   changePalletLength: function (length: number) {
     this.palletLength = length;
-    this.changePalletQuantity();
+    this.pallets.forEach((pallet) => (pallet.length = length));
   },
   changePalletHeight: function (height: number) {
     this.palletHeight = height;
-    this.changePalletQuantity();
+    this.pallets.forEach((pallet) => (pallet.height = height));
   },
-  isWireframe: false,
   toggleWireframe: function () {
-    this.isWireframe = !this.isWireframe;
-    createPalletObjects();
+    this.pallets.forEach((pallet) => pallet.toggleWireframe());
   },
-  isVisible: true,
   toggleVisible: function () {
-    this.isVisible = !this.isVisible;
-    createPalletObjects();
+    this.pallets.forEach((pallet) => pallet.toggleVisible());
   },
 };
 
+data.updatePalletQuantity();
+
 const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(data.floorSize.width, data.floorSize.length),
+  new THREE.PlaneGeometry(data.trailerWidth, data.trailerLength),
   new THREE.MeshStandardMaterial({ color: "#e3975b", roughness: 0.5 })
 );
 floor.name = "floor";
 floor.rotation.x = THREE.MathUtils.degToRad(-90);
 floor.position.z = 6.8;
-floor.position.x = data.floorSize.width / 2;
+floor.position.x = data.trailerWidth / 2;
 floor.receiveShadow = true;
 scene.add(floor);
 
@@ -159,54 +178,65 @@ loader.load(
 const createPalletObjects = () => {
   allPallets.remove(...allPallets.children);
 
-  const positions = arrangePalettes(
-    data.floorSize.width,
-    data.floorSize.length,
-    data.palettes
-  );
+  data.updatePalletQuantity();
 
-  positions.forEach((pos, index) => {
+  data.pallets.forEach((pallet, index) => {
     if (palletModel) {
-      palletModel.width = data.palletWidth - 0.02;
-      palletModel.length = data.palletLength - 0.02;
+      palletModel.width = pallet.width - 0.02;
+      palletModel.length = pallet.length - 0.02;
 
-      palletModel.scale.x = data.palletWidth / 0.8 - 0.02;
-      palletModel.scale.z = data.palletLength / 1.2 - 0.02;
+      palletModel.scale.x = pallet.width / 0.8 - 0.02;
+      palletModel.scale.z = pallet.length / 1.2 - 0.02;
 
-      palletModel.position.set(pos.x, pos.y + 0.046, pos.z);
+      palletModel.position.set(
+        pallet.position.x,
+        pallet.position.y + 0.046,
+        pallet.position.z
+      );
       palletModel.material = new THREE.MeshStandardMaterial({
         color: "#85560c",
       });
       palletModel.castShadow = true;
       palletModel.receiveShadow = true;
 
+      const isColorWhite =
+        (pallet.material as THREE.MeshStandardMaterial).color.b ===
+          new THREE.Color(1, 1, 1).b &&
+        (pallet.material as THREE.MeshStandardMaterial).color.g ===
+          new THREE.Color(1, 1, 1).g &&
+        (pallet.material as THREE.MeshStandardMaterial).color.r ===
+          new THREE.Color(1, 1, 1).r;
+
       const material = new THREE.MeshStandardMaterial({
-        color: colors[index % colors.length],
+        color: !isColorWhite
+          ? (pallet.material as THREE.MeshStandardMaterial).color
+          : colors[index % colors.length],
         roughness: 0.5,
-        wireframe: data.isWireframe,
       });
 
       const geometry = new THREE.BoxGeometry(
-        data.palletWidth - 0.02,
-        data.palletHeight,
-        data.palletLength - 0.02
+        pallet.width - 0.02,
+        pallet.height,
+        pallet.length - 0.02
       );
 
-      const palletContent = new THREE.Mesh(geometry, material);
-      palletContent.position.set(
-        pos.x,
-        pos.y + data.palletHeight / 2 + 0.1,
-        pos.z
+      pallet.material = material;
+      pallet.geometry = geometry;
+      pallet.position.set(
+        pallet.position.x,
+        pallet.position.y + data.palletHeight / 2 + 0.1,
+        pallet.position.z
       );
-      palletContent.name = `pallet_${index + 1}`;
+      pallet.name = `pallet_${index + 1}`;
 
-      palletContent.castShadow = !data.isWireframe;
-      palletContent.receiveShadow = !data.isWireframe;
-      palletContent.visible = data.isVisible;
+      pallet.castShadow = !(pallet.material as THREE.MeshStandardMaterial)
+        .wireframe;
+      pallet.receiveShadow = !(pallet.material as THREE.MeshStandardMaterial)
+        .wireframe;
 
       const wholePallet = new THREE.Group();
       wholePallet.add(palletModel.clone());
-      wholePallet.add(palletContent);
+      wholePallet.add(pallet);
       allPallets.add(wholePallet);
       scene.add(allPallets);
     }
@@ -221,7 +251,7 @@ palletFolder
   .add(data, "palletNumber", 1, 100, 1)
   .name("Pallets number")
   .onChange(() => {
-    data.changePalletQuantity();
+    data.updatePalletQuantity();
     createPalletObjects();
   });
 palletFolder
@@ -284,26 +314,16 @@ document.addEventListener("mousedown", (event: MouseEvent) => {
 
   raycaster.setFromCamera(coords, camera);
 
-  const intersections = raycaster.intersectObjects(allPallets.children, true);
+  const intersections = raycaster.intersectObjects(data.pallets, true);
   if (intersections.length > 0) {
-    const selectedObject = intersections[0].object;
+    const selectedObject = intersections[0].object as Pallet;
 
     if (selectedObject instanceof THREE.Mesh) {
-      let randomColor = new THREE.Color(
-        Math.random(),
-        Math.random(),
-        Math.random()
-      );
-
       if (selectedObject.name.includes("pallet") && selectedObject.visible) {
         const existingDialog = document.getElementById("custom-dialog");
         if (existingDialog) {
           existingDialog.remove();
         }
-
-        const boundingBox = new THREE.Box3().setFromObject(selectedObject);
-        const size = new THREE.Vector3();
-        boundingBox.getSize(size);
 
         const dialog = document.createElement("div");
         dialog.id = "custom-dialog";
@@ -311,31 +331,57 @@ document.addEventListener("mousedown", (event: MouseEvent) => {
             <p class="pallet-name"><strong>${selectedObject.name
               .replace("_", " ")
               .toUpperCase()}</strong></p>
-            <p><strong>Width: </strong>${Math.round(size.x * 10) / 10}</p>
-            <p><strong>Length: </strong>${Math.round(size.y * 10) / 10}</p>
+            <p><strong>Width: </strong>${
+              Math.round(selectedObject.width * 10) / 10
+            }</p>
+            <p><strong>Length: </strong>${
+              Math.round(selectedObject.length * 10) / 10
+            }</p>
             
         `;
         dialog.classList.add("pallet-dialog");
-        dialog.style.backgroundColor = `#${selectedObject.material.color.getHexString()}`;
         dialog.style.position = "absolute";
         dialog.style.left = `${event.clientX}px`;
         dialog.style.top = `${event.clientY}px`;
 
-        const button = document.createElement("button");
-        button.id = "change-pallet-color";
-        button.textContent = "Change color";
-        button.style.backgroundColor = `#${randomColor.getHexString()}`;
-        button.addEventListener("click", () => {
-          selectedObject.material.color = randomColor;
-          randomColor = new THREE.Color(
-            Math.random(),
-            Math.random(),
-            Math.random()
-          );
-          button.style.backgroundColor = `#${randomColor.getHexString()}`;
-          dialog.style.backgroundColor = `#${selectedObject.material.color.getHexString()}`;
+        const widthSlider = document.createElement("input");
+        widthSlider.type = "range";
+        widthSlider.max = String(data.trailerWidth);
+        widthSlider.min = "0.4";
+        widthSlider.step = "0.1";
+        widthSlider.value = String((selectedObject as Pallet).width);
+        widthSlider.addEventListener("input", () => {
+          (selectedObject as Pallet).width = Number(widthSlider.value);
+          createPalletObjects();
         });
-        dialog.appendChild(button);
+        dialog.appendChild(widthSlider);
+
+        const lengthSlider = document.createElement("input");
+        lengthSlider.type = "range";
+        lengthSlider.max = String(data.trailerWidth);
+        lengthSlider.min = "0.4";
+        lengthSlider.step = "0.1";
+        lengthSlider.value = String((selectedObject as Pallet).length);
+        lengthSlider.addEventListener("input", () => {
+          (selectedObject as Pallet).length = Number(lengthSlider.value);
+          createPalletObjects();
+        });
+        dialog.appendChild(lengthSlider);
+
+        const colorInput = document.createElement("input");
+        const color =
+          "#" +
+          (
+            selectedObject.material as THREE.MeshStandardMaterial
+          ).color.getHexString();
+        colorInput.type = "color";
+        colorInput.value = color;
+
+        colorInput.addEventListener("change", () => {
+          (selectedObject.material as THREE.MeshStandardMaterial).color =
+            new THREE.Color(colorInput.value);
+        });
+        dialog.appendChild(colorInput);
         document.body.appendChild(dialog);
 
         const closeDialog = (e: MouseEvent) => {

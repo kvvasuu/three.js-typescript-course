@@ -1,20 +1,41 @@
-type palletSize = {
-  width: number;
-  length: number;
-};
+import { Mesh, MeshStandardMaterial } from "three";
 
-function arrangePalettes(
+export class Pallet extends Mesh {
+  width: number = 0.8;
+  length: number = 1.2;
+  height: number = 0.6;
+  isVisible: boolean = true;
+
+  constructor(width: number = 0.8, length: number = 1.2, height: number = 0.6) {
+    super();
+    this.width = width;
+    this.length = length;
+    this.height = height;
+  }
+
+  toggleVisible() {
+    this.visible = !this.visible;
+  }
+
+  toggleWireframe() {
+    (this.material as MeshStandardMaterial).wireframe = !(
+      this.material as MeshStandardMaterial
+    ).wireframe;
+  }
+}
+
+function arrangePallets(
   trailerWidth: number,
   trailerLength: number,
-  palettes: palletSize[]
+  pallets: Pallet[],
+  palletsPlaced: number = 0
 ) {
-  let positions = [];
   let currentX = 0,
     currentZ = 0;
   let rowMaxHeight = 0;
 
-  for (let palette of palettes) {
-    const { width, length } = palette;
+  for (let pallet of pallets) {
+    const { width, length } = pallet;
 
     if (currentX + width > trailerWidth) {
       currentX = 0;
@@ -24,18 +45,17 @@ function arrangePalettes(
 
     if (currentZ + length > trailerLength) break;
 
-    positions.push({
-      x: currentX + width / 2,
-      y: 0,
-      z: currentZ + length / 2,
-    });
+    pallet.position.x = currentX + width / 2;
+    pallet.position.y = 0;
+    pallet.position.z = currentZ + length / 2;
 
     currentX += width;
 
     rowMaxHeight = Math.max(rowMaxHeight, length);
+    palletsPlaced++;
   }
 
-  return positions;
+  return pallets.splice(0, palletsPlaced);
 }
 
-export default arrangePalettes;
+export default arrangePallets;
