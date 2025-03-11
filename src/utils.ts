@@ -1,9 +1,9 @@
 import { Mesh, MeshStandardMaterial } from "three";
 
 export class Pallet extends Mesh {
-  width: number = 0.8;
-  length: number = 1.2;
-  height: number = 0.6;
+  width: number;
+  length: number;
+  height: number;
   isVisible: boolean = true;
 
   constructor(width: number = 0.8, length: number = 1.2, height: number = 0.6) {
@@ -24,38 +24,34 @@ export class Pallet extends Mesh {
   }
 }
 
-function arrangePallets(
+export function arrangePallets(
   trailerWidth: number,
   trailerLength: number,
-  pallets: Pallet[],
-  palletsPlaced: number = 0
-) {
+  pallets: Pallet[]
+): Pallet[] {
   let currentX = 0,
     currentZ = 0;
-  let rowMaxHeight = 0;
+  let rowMaxDepth = 0;
+  let placedPallets: Pallet[] = [];
 
   for (let pallet of pallets) {
     const { width, length } = pallet;
 
     if (currentX + width > trailerWidth) {
       currentX = 0;
-      currentZ += rowMaxHeight;
-      rowMaxHeight = 0;
+      currentZ += rowMaxDepth;
+      rowMaxDepth = 0;
     }
 
     if (currentZ + length > trailerLength) break;
 
-    pallet.position.x = currentX + width / 2;
-    pallet.position.y = 0;
-    pallet.position.z = currentZ + length / 2;
+    pallet.position.set(currentX + width / 2, 0, currentZ + length / 2);
 
     currentX += width;
+    rowMaxDepth = Math.max(rowMaxDepth, length);
 
-    rowMaxHeight = Math.max(rowMaxHeight, length);
-    palletsPlaced++;
+    placedPallets.push(pallet);
   }
 
-  return pallets.splice(0, palletsPlaced);
+  return placedPallets;
 }
-
-export default arrangePallets;

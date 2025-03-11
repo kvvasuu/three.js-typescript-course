@@ -1,29 +1,11 @@
 import "./style.css";
 import * as THREE from "three";
-import { Pallet } from "./utils";
+import { Pallet, arrangePallets } from "./utils";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import arrangePalettes from "./utils";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import hdr from "/img/zwartkops_pit_1k.hdr";
-
-const hideButton = document.getElementById("hide-ui");
-let isUIVisible = true;
-
-const toggleUI = () => {
-  if (isUIVisible) {
-    gui.hide();
-    isUIVisible = false;
-    hideButton?.classList.add("hide");
-  } else {
-    gui.show();
-    isUIVisible = true;
-    hideButton?.classList.remove("hide");
-  }
-};
-
-hideButton?.addEventListener("click", toggleUI);
 
 const scene = new THREE.Scene();
 
@@ -101,7 +83,7 @@ const data = {
 
       palletsToArrange = [...[...this.pallets], ...palletsToAdd];
     }
-    this.pallets = arrangePalettes(
+    this.pallets = arrangePallets(
       this.trailerWidth,
       this.trailerLength,
       palletsToArrange
