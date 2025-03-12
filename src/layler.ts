@@ -1,9 +1,8 @@
 import "./style.css";
 import * as THREE from "three";
-import { Pallet, arrangePallets } from "./utils";
+import { Pallet, arrangePallets, loadModels } from "./utils";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import hdr from "/img/zwartkops_pit_1k.hdr";
 
@@ -91,11 +90,15 @@ const data = {
   },
   changePalletWidth: function (width: number) {
     this.palletWidth = width;
-    this.pallets.forEach((pallet) => (pallet.width = width));
+    this.pallets.forEach((pallet) =>
+      pallet.updateDimensions(width, pallet.length)
+    );
   },
   changePalletLength: function (length: number) {
     this.palletLength = length;
-    this.pallets.forEach((pallet) => (pallet.length = length));
+    this.pallets.forEach((pallet) =>
+      pallet.updateDimensions(pallet.width, length)
+    );
   },
   changePalletHeight: function (height: number) {
     this.palletHeight = height;
@@ -140,22 +143,7 @@ const colors = [
 
 const allPallets = new THREE.Group();
 
-let palletModel: any = null;
-
-const loader = new GLTFLoader();
-
-loader.load(
-  "/models/layler/paleta.glb",
-  function (gltf) {
-    const model = gltf.scene;
-    palletModel = model.children[0];
-    createPalletObjects();
-  },
-  undefined,
-  function (error) {
-    console.error(error);
-  }
-);
+const { palletModel, bagsModel } = await loadModels();
 
 const createPalletObjects = () => {
   allPallets.remove(...allPallets.children);
@@ -163,10 +151,7 @@ const createPalletObjects = () => {
   data.updatePalletQuantity();
 
   data.pallets.forEach((pallet, index) => {
-    if (palletModel) {
-      palletModel.width = pallet.width - 0.02;
-      palletModel.length = pallet.length - 0.02;
-
+    if (palletModel && bagsModel) {
       palletModel.scale.x = pallet.width / 0.8 - 0.02;
       palletModel.scale.z = pallet.length / 1.2 - 0.02;
 
@@ -200,6 +185,14 @@ const createPalletObjects = () => {
         pallet.width - 0.02,
         pallet.height,
         pallet.length - 0.02
+      );
+
+      pallet.model || pallet.setModel(bagsModel.clone());
+
+      pallet.model?.scale.set(
+        data.palletWidth / 0.8,
+        data.palletLength / 1.2,
+        data.palletHeight / 0.6
       );
 
       pallet.material = material;
@@ -241,7 +234,6 @@ palletFolder
   .name("Pallets width")
   .onChange((number) => {
     data.changePalletWidth(number);
-
     createPalletObjects();
   });
 palletFolder
@@ -286,6 +278,8 @@ function animate() {
 
 animate();
 
+createPalletObjects();
+
 const raycaster = new THREE.Raycaster();
 
 document.addEventListener("mousedown", (event: MouseEvent) => {
@@ -306,6 +300,8 @@ document.addEventListener("mousedown", (event: MouseEvent) => {
         if (existingDialog) {
           existingDialog.remove();
         }
+
+        console.log(selectedObject);
 
         const dialog = document.createElement("div");
         dialog.id = "custom-dialog";

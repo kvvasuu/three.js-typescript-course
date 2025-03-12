@@ -1,10 +1,12 @@
-import { Mesh, MeshStandardMaterial } from "three";
+import { Mesh, MeshStandardMaterial, Object3D, Vector3, Box3 } from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 export class Pallet extends Mesh {
   width: number;
   length: number;
   height: number;
   isVisible: boolean = true;
+  model?: Object3D;
 
   constructor(width: number = 0.8, length: number = 1.2, height: number = 0.6) {
     super();
@@ -21,6 +23,37 @@ export class Pallet extends Mesh {
     (this.material as MeshStandardMaterial).wireframe = !(
       this.material as MeshStandardMaterial
     ).wireframe;
+  }
+
+  setModel(model: Object3D) {
+    this.model = model;
+    this.add(model);
+  }
+
+  fitModelToDimensions() {
+    if (!this.model) return;
+
+    const sizee = new Vector3(this.width, this.length, this.height);
+
+    const box = new Box3().setFromCenterAndSize(this.position, sizee);
+    const size = new Vector3();
+    box.getSize(size);
+
+    const scaleX = this.width / 0.8;
+    const scaleZ = this.length / 1.2;
+    const scaleY = 1;
+
+    console.log(scaleX);
+
+    this.model.scale.set(scaleX, scaleY, scaleZ);
+
+    console.log(this.model);
+  }
+
+  updateDimensions(width: number, length: number) {
+    this.width = width;
+    this.length = length;
+    this.fitModelToDimensions();
   }
 }
 
@@ -54,4 +87,17 @@ export function arrangePallets(
   }
 
   return placedPallets;
+}
+
+export async function loadModels() {
+  const loader = new GLTFLoader();
+  const [...model] = await Promise.all([
+    loader.loadAsync("/models/layler/paleta.glb"),
+    loader.loadAsync("/models/layler/bags.glb"),
+  ]);
+
+  const palletModel = model[0].scene.children[0] as Mesh;
+  const bagsModel = model[1].scene.children[0] as Mesh;
+
+  return { palletModel, bagsModel };
 }
