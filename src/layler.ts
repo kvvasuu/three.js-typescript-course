@@ -1,32 +1,51 @@
 import "./style.css";
-import * as THREE from "three";
+import {
+  Scene,
+  DataTexture,
+  EquirectangularReflectionMapping,
+  Euler,
+  GridHelper,
+  PerspectiveCamera,
+  WebGLRenderer,
+  PCFSoftShadowMap,
+  Mesh,
+  MeshStandardMaterial,
+  PlaneGeometry,
+  MathUtils,
+  Color,
+  BoxGeometry,
+  Group,
+  Raycaster,
+  Vector2,
+  DirectionalLight,
+} from "three";
 import { Pallet, arrangePallets, loadModels } from "./utils";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import hdr from "/img/zwartkops_pit_1k.hdr";
 
-const scene = new THREE.Scene();
+const scene = new Scene();
 
-let environmentTexture: THREE.DataTexture;
+let environmentTexture: DataTexture;
 
 new RGBELoader().load(hdr, (texture) => {
   environmentTexture = texture;
-  environmentTexture.mapping = THREE.EquirectangularReflectionMapping;
+  environmentTexture.mapping = EquirectangularReflectionMapping;
   scene.environment = environmentTexture;
   scene.background = environmentTexture;
-  scene.environmentRotation = new THREE.Euler(0, 160, 0);
-  scene.backgroundRotation = new THREE.Euler(0, 160, 0);
+  scene.environmentRotation = new Euler(0, 160, 0);
+  scene.backgroundRotation = new Euler(0, 160, 0);
   scene.backgroundBlurriness = 0.06;
   scene.environmentIntensity = 0.2;
 });
 
-const grid = new THREE.GridHelper(30, 30);
+const grid = new GridHelper(30, 30);
 grid.position.z = 6.8;
 grid.position.y = -0.01;
 scene.add(grid);
 
-const camera = new THREE.PerspectiveCamera(
+const camera = new PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
@@ -34,10 +53,10 @@ const camera = new THREE.PerspectiveCamera(
 );
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
-const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+const renderer = new WebGLRenderer({ canvas: canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = PCFSoftShadowMap;
 
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -90,15 +109,11 @@ const data = {
   },
   changePalletWidth: function (width: number) {
     this.palletWidth = width;
-    this.pallets.forEach((pallet) =>
-      pallet.updateDimensions(width, pallet.length)
-    );
+    this.pallets.forEach((pallet) => (pallet.width = width));
   },
   changePalletLength: function (length: number) {
     this.palletLength = length;
-    this.pallets.forEach((pallet) =>
-      pallet.updateDimensions(pallet.width, length)
-    );
+    this.pallets.forEach((pallet) => (pallet.length = length));
   },
   changePalletHeight: function (height: number) {
     this.palletHeight = height;
@@ -114,12 +129,12 @@ const data = {
 
 data.updatePalletQuantity();
 
-const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(data.trailerWidth, data.trailerLength),
-  new THREE.MeshStandardMaterial({ color: "#e3975b", roughness: 0.5 })
+const floor = new Mesh(
+  new PlaneGeometry(data.trailerWidth, data.trailerLength),
+  new MeshStandardMaterial({ color: "#e3975b", roughness: 0.5 })
 );
 floor.name = "floor";
-floor.rotation.x = THREE.MathUtils.degToRad(-90);
+floor.rotation.x = MathUtils.degToRad(-90);
 floor.position.z = 6.8;
 floor.position.x = data.trailerWidth / 2;
 floor.receiveShadow = true;
@@ -141,9 +156,9 @@ const colors = [
   "#fa5f8d",
 ];
 
-const allPallets = new THREE.Group();
+const allPallets = new Group();
 
-const { palletModel, bagsModel } = await loadModels();
+const palletModel = await loadModels();
 
 const createPalletObjects = () => {
   allPallets.remove(...allPallets.children);
@@ -151,7 +166,7 @@ const createPalletObjects = () => {
   data.updatePalletQuantity();
 
   data.pallets.forEach((pallet, index) => {
-    if (palletModel && bagsModel) {
+    if (palletModel) {
       palletModel.scale.x = pallet.width / 0.8 - 0.02;
       palletModel.scale.z = pallet.length / 1.2 - 0.02;
 
@@ -160,39 +175,31 @@ const createPalletObjects = () => {
         pallet.position.y + 0.046,
         pallet.position.z
       );
-      palletModel.material = new THREE.MeshStandardMaterial({
+      palletModel.material = new MeshStandardMaterial({
         color: "#85560c",
       });
       palletModel.castShadow = true;
       palletModel.receiveShadow = true;
 
       const isColorWhite =
-        (pallet.material as THREE.MeshStandardMaterial).color.b ===
-          new THREE.Color(1, 1, 1).b &&
-        (pallet.material as THREE.MeshStandardMaterial).color.g ===
-          new THREE.Color(1, 1, 1).g &&
-        (pallet.material as THREE.MeshStandardMaterial).color.r ===
-          new THREE.Color(1, 1, 1).r;
+        (pallet.material as MeshStandardMaterial).color.b ===
+          new Color(1, 1, 1).b &&
+        (pallet.material as MeshStandardMaterial).color.g ===
+          new Color(1, 1, 1).g &&
+        (pallet.material as MeshStandardMaterial).color.r ===
+          new Color(1, 1, 1).r;
 
-      const material = new THREE.MeshStandardMaterial({
+      const material = new MeshStandardMaterial({
         color: !isColorWhite
-          ? (pallet.material as THREE.MeshStandardMaterial).color
+          ? (pallet.material as MeshStandardMaterial).color
           : colors[index % colors.length],
         roughness: 0.5,
       });
 
-      const geometry = new THREE.BoxGeometry(
+      const geometry = new BoxGeometry(
         pallet.width - 0.02,
         pallet.height,
         pallet.length - 0.02
-      );
-
-      pallet.model || pallet.setModel(bagsModel.clone());
-
-      pallet.model?.scale.set(
-        data.palletWidth / 0.8,
-        data.palletLength / 1.2,
-        data.palletHeight / 0.6
       );
 
       pallet.material = material;
@@ -204,12 +211,11 @@ const createPalletObjects = () => {
       );
       pallet.name = `pallet_${index + 1}`;
 
-      pallet.castShadow = !(pallet.material as THREE.MeshStandardMaterial)
-        .wireframe;
-      pallet.receiveShadow = !(pallet.material as THREE.MeshStandardMaterial)
+      pallet.castShadow = !(pallet.material as MeshStandardMaterial).wireframe;
+      pallet.receiveShadow = !(pallet.material as MeshStandardMaterial)
         .wireframe;
 
-      const wholePallet = new THREE.Group();
+      const wholePallet = new Group();
       wholePallet.add(palletModel.clone());
       wholePallet.add(pallet);
       allPallets.add(wholePallet);
@@ -220,45 +226,43 @@ const createPalletObjects = () => {
 
 const gui = new GUI();
 
-const palletFolder = gui.addFolder("Pallets");
-
-palletFolder
+gui
   .add(data, "palletNumber", 1, 100, 1)
   .name("Pallets number")
   .onChange(() => {
     data.updatePalletQuantity();
     createPalletObjects();
   });
-palletFolder
+gui
   .add(data, "palletWidth", 0.4, 2.5, 0.1)
   .name("Pallets width")
   .onChange((number) => {
     data.changePalletWidth(number);
     createPalletObjects();
   });
-palletFolder
+gui
   .add(data, "palletLength", 0.4, 2.5, 0.1)
   .name("Pallets length")
   .onChange((number) => {
     data.changePalletLength(number);
     createPalletObjects();
   });
-palletFolder
+gui
   .add(data, "palletHeight", 0.2, 2, 0.1)
   .name("Pallets height")
   .onChange((number) => {
     data.changePalletHeight(number);
     createPalletObjects();
   });
-palletFolder.add(data, "toggleWireframe").name("Toggle wireframe");
-palletFolder.add(data, "toggleVisible").name("Toggle visibility");
+gui.add(data, "toggleWireframe").name("Toggle wireframe");
+gui.add(data, "toggleVisible").name("Toggle visibility");
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.target.copy(floor.position);
 controls.update();
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 4);
+const directionalLight = new DirectionalLight(0xffffff, 4);
 directionalLight.position.z = -2;
 directionalLight.position.x = -2;
 
@@ -280,10 +284,10 @@ animate();
 
 createPalletObjects();
 
-const raycaster = new THREE.Raycaster();
+const raycaster = new Raycaster();
 
 document.addEventListener("mousedown", (event: MouseEvent) => {
-  const coords = new THREE.Vector2(
+  const coords = new Vector2(
     (event.clientX / renderer.domElement.clientWidth) * 2 - 1,
     -((event.clientY / renderer.domElement.clientHeight) * 2 - 1)
   );
@@ -294,7 +298,7 @@ document.addEventListener("mousedown", (event: MouseEvent) => {
   if (intersections.length > 0) {
     const selectedObject = intersections[0].object as Pallet;
 
-    if (selectedObject instanceof THREE.Mesh) {
+    if (selectedObject instanceof Mesh) {
       if (selectedObject.name.includes("pallet") && selectedObject.visible) {
         const existingDialog = document.getElementById("custom-dialog");
         if (existingDialog) {
@@ -350,14 +354,15 @@ document.addEventListener("mousedown", (event: MouseEvent) => {
         const color =
           "#" +
           (
-            selectedObject.material as THREE.MeshStandardMaterial
+            selectedObject.material as MeshStandardMaterial
           ).color.getHexString();
         colorInput.type = "color";
         colorInput.value = color;
 
         colorInput.addEventListener("change", () => {
-          (selectedObject.material as THREE.MeshStandardMaterial).color =
-            new THREE.Color(colorInput.value);
+          (selectedObject.material as MeshStandardMaterial).color = new Color(
+            colorInput.value
+          );
         });
         dialog.appendChild(colorInput);
         document.body.appendChild(dialog);
