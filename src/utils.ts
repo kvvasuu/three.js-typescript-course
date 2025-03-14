@@ -1,11 +1,15 @@
-import { Mesh, MeshStandardMaterial } from "three";
+import { Mesh, MeshStandardMaterial, Color, MathUtils } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 export class Pallet extends Mesh {
   width: number;
   length: number;
   height: number;
+  color: Color = new Color(1, 1, 1);
   isVisible: boolean = true;
+  hovered: boolean = false;
+  clicked: boolean = false;
+  defaultYPosition: number = 0.046;
 
   constructor(width: number = 0.8, length: number = 1.2, height: number = 0.6) {
     super();
@@ -22,6 +26,44 @@ export class Pallet extends Mesh {
     (this.material as MeshStandardMaterial).wireframe = !(
       this.material as MeshStandardMaterial
     ).wireframe;
+  }
+
+  update(delta: number) {
+    const selectionColor = brightenColor(this.color.clone(), 2);
+
+    if (this.hovered) {
+      !this.clicked
+        ? (this.material as MeshStandardMaterial).color.lerp(
+            selectionColor,
+            delta * 10
+          )
+        : (this.material as MeshStandardMaterial).color.lerp(
+            this.color,
+            delta * 10
+          );
+      this.position.y = MathUtils.lerp(
+        this.position.y,
+        this.height / 2 + 0.25,
+        delta * 5
+      );
+    } else {
+      if (!this.clicked) {
+        (this.material as MeshStandardMaterial).color.lerp(
+          this.color,
+          delta * 10
+        );
+        this.position.y = MathUtils.lerp(
+          this.position.y,
+          this.height / 2 + 0.1,
+          delta * 5
+        );
+      } else {
+        (this.material as MeshStandardMaterial).color.lerp(
+          this.color,
+          delta * 10
+        );
+      }
+    }
   }
 }
 
@@ -67,4 +109,12 @@ export async function loadModels() {
   const palletModel = model[0].scene.children[0] as Mesh;
 
   return palletModel;
+}
+
+function brightenColor(color: Color, factor: number, minOffset = 0.1): Color {
+  return new Color(
+    Math.min((color.r + minOffset) * factor, 1),
+    Math.min((color.g + minOffset) * factor, 1),
+    Math.min((color.b + minOffset) * factor, 1)
+  );
 }

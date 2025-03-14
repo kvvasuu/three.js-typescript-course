@@ -18,6 +18,7 @@ import {
   Raycaster,
   Vector2,
   DirectionalLight,
+  Clock,
 } from "three";
 import { Pallet, arrangePallets, loadModels } from "./utils";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
@@ -202,6 +203,7 @@ const createPalletObjects = () => {
         pallet.length - 0.02
       );
 
+      pallet.color = new Color(colors[index % colors.length]);
       pallet.material = material;
       pallet.geometry = geometry;
       pallet.position.set(
@@ -273,15 +275,6 @@ directionalLight.shadow.camera.near = 0.5;
 directionalLight.shadow.camera.far = 500;
 scene.add(directionalLight);
 
-function animate() {
-  requestAnimationFrame(animate);
-
-  renderer.render(scene, camera);
-  controls.update();
-}
-
-animate();
-
 createPalletObjects();
 
 const raycaster = new Raycaster();
@@ -298,6 +291,8 @@ document.addEventListener("mousedown", (event: MouseEvent) => {
   if (intersections.length > 0) {
     const selectedObject = intersections[0].object as Pallet;
 
+    data.pallets.forEach((p) => (p.clicked = false));
+
     if (selectedObject instanceof Mesh) {
       if (selectedObject.name.includes("pallet") && selectedObject.visible) {
         const existingDialog = document.getElementById("custom-dialog");
@@ -305,7 +300,7 @@ document.addEventListener("mousedown", (event: MouseEvent) => {
           existingDialog.remove();
         }
 
-        console.log(selectedObject);
+        selectedObject.clicked = true;
 
         const dialog = document.createElement("div");
         dialog.id = "custom-dialog";
@@ -351,18 +346,15 @@ document.addEventListener("mousedown", (event: MouseEvent) => {
         dialog.appendChild(lengthSlider);
 
         const colorInput = document.createElement("input");
-        const color =
-          "#" +
-          (
-            selectedObject.material as MeshStandardMaterial
-          ).color.getHexString();
+        const color = "#" + selectedObject.color.getHexString();
         colorInput.type = "color";
         colorInput.value = color;
 
-        colorInput.addEventListener("change", () => {
+        colorInput.addEventListener("input", () => {
           (selectedObject.material as MeshStandardMaterial).color = new Color(
             colorInput.value
           );
+          selectedObject.color = new Color(colorInput.value);
         });
         dialog.appendChild(colorInput);
         document.body.appendChild(dialog);
@@ -370,6 +362,7 @@ document.addEventListener("mousedown", (event: MouseEvent) => {
         const closeDialog = (e: MouseEvent) => {
           if (!dialog.contains(e.target as Node)) {
             dialog.remove();
+            selectedObject.clicked = false;
             document.removeEventListener("click", closeDialog);
           }
         };
@@ -381,3 +374,35 @@ document.addEventListener("mousedown", (event: MouseEvent) => {
     }
   }
 });
+document.addEventListener("mousemove", (event: MouseEvent) => {
+  const coords = new Vector2(
+    (event.clientX / renderer.domElement.clientWidth) * 2 - 1,
+    -((event.clientY / renderer.domElement.clientHeight) * 2 - 1)
+  );
+
+  raycaster.setFromCamera(coords, camera);
+
+  const intersections = raycaster.intersectObjects(data.pallets, true);
+
+  data.pallets.forEach((p) => (p.hovered = false));
+
+  intersections.length && ((intersections[0].object as Pallet).hovered = true);
+});
+
+const clock = new Clock();
+let delta = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  delta = clock.getDelta();
+
+  data.pallets.forEach((p) => {
+    p.update(delta);
+  });
+
+  renderer.render(scene, camera);
+  controls.update();
+}
+
+animate();

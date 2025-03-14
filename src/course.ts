@@ -53,31 +53,38 @@ class Pickable extends Mesh {
   }
 
   update(delta: number) {
-    //this.rotation.x += delta / 2
-    //this.rotation.y += delta / 2
+    this.rotation.x += delta / 2;
+    this.rotation.y += delta / 2;
 
-    this.clicked
-      ? (this.position.y = MathUtils.lerp(this.position.y, 1, delta * 5))
-      : (this.position.y = MathUtils.lerp(this.position.y, 0, delta * 5));
+    // this.clicked
+    //   ? (this.position.y = MathUtils.lerp(this.position.y, 1, delta * 5))
+    //   : (this.position.y = MathUtils.lerp(this.position.y, 0, delta * 5));
 
     //console.log(this.position.y)
 
     // this.clicked
     //   ? (this.position.y = lerp(this.position.y, 1, delta * 5))
-    //   : (this.position.y = lerp(this.position.y, 0, delta * 5))
+    //   : (this.position.y = lerp(this.position.y, 0, delta * 5));
 
-    // this.hovered
-    //   ? this.material.color.lerp(this.colorTo, delta * 10)
-    //   : this.material.color.lerp(this.defaultColor, delta * 10)
+    this.hovered
+      ? this.material.color.lerp(this.colorTo, delta * 10)
+      : this.material.color.lerp(this.defaultColor, delta * 10);
 
-    // this.hovered
-    //   ? (this.material.color.lerp(this.colorTo, delta * 10),
-    //     (this.material.roughness = lerp(this.material.roughness, 0, delta * 10)),
-    //     (this.material.metalness = lerp(this.material.metalness, 1, delta * 10))
-    //     )
-    //   : (this.material.color.lerp(this.defaultColor, delta),
-    //     (this.material.roughness = lerp(this.material.roughness, 1, delta)),
-    //     (this.material.metalness = lerp(this.material.metalness, 0, delta)))
+    this.hovered
+      ? (this.material.color.lerp(this.colorTo, delta * 10),
+        (this.material.roughness = lerp(
+          this.material.roughness,
+          0,
+          delta * 10
+        )),
+        (this.material.metalness = lerp(
+          this.material.metalness,
+          1,
+          delta * 10
+        )))
+      : (this.material.color.lerp(this.defaultColor, delta),
+        (this.material.roughness = lerp(this.material.roughness, 1, delta)),
+        (this.material.metalness = lerp(this.material.metalness, 0, delta)));
 
     // this.clicked
     //   ? this.scale.set(
@@ -89,22 +96,22 @@ class Pickable extends Mesh {
     //       MathUtils.lerp(this.scale.x, 1.0, delta),
     //       MathUtils.lerp(this.scale.y, 1.0, delta),
     //       MathUtils.lerp(this.scale.z, 1.0, delta)
-    //     )
+    //     );
 
-    // this.clicked
-    //   ? this.scale.set(
-    //       lerp(this.scale.x, 1.5, delta * 5),
-    //       lerp(this.scale.y, 1.5, delta * 5),
-    //       lerp(this.scale.z, 1.5, delta * 5)
-    //     )
-    //   : this.scale.set(
-    //       lerp(this.scale.x, 1.0, delta),
-    //       lerp(this.scale.y, 1.0, delta),
-    //       lerp(this.scale.z, 1.0, delta)
-    //     )
+    this.clicked
+      ? this.scale.set(
+          lerp(this.scale.x, 1.5, delta * 5),
+          lerp(this.scale.y, 1.5, delta * 5),
+          lerp(this.scale.z, 1.5, delta * 5)
+        )
+      : this.scale.set(
+          lerp(this.scale.x, 1.0, delta),
+          lerp(this.scale.y, 1.0, delta),
+          lerp(this.scale.z, 1.0, delta)
+        );
 
-    // this.clicked ? this.v.set(1.5, 1.5, 1.5) : this.v.set(1.0, 1.0, 1.0)
-    // this.scale.lerp(this.v, delta * 5)
+    this.clicked ? this.v.set(1.5, 1.5, 1.5) : this.v.set(1.0, 1.0, 1.0);
+    this.scale.lerp(this.v, delta * 5);
   }
 }
 
@@ -171,25 +178,25 @@ renderer.domElement.addEventListener("pointerdown", (e) => {
     ).clicked);
 
   // toggles `clicked` property for all overlapping Pickables detected by the raycaster at the same time
-  // intersects.forEach((i) => {
-  //   ;(i.object as Pickable).clicked = !(i.object as Pickable).clicked
-  // })
+  intersects.forEach((i) => {
+    (i.object as Pickable).clicked = !(i.object as Pickable).clicked;
+  });
 });
 
-// renderer.domElement.addEventListener('mousemove', (e) => {
-//   mouse.set(
-//     (e.clientX / renderer.domElement.clientWidth) * 2 - 1,
-//     -(e.clientY / renderer.domElement.clientHeight) * 2 + 1
-//   )
+renderer.domElement.addEventListener("mousemove", (e) => {
+  mouse.set(
+    (e.clientX / renderer.domElement.clientWidth) * 2 - 1,
+    -(e.clientY / renderer.domElement.clientHeight) * 2 + 1
+  );
 
-//   raycaster.setFromCamera(mouse, camera)
+  raycaster.setFromCamera(mouse, camera);
 
-//   intersects = raycaster.intersectObjects(pickables, false)
+  intersects = raycaster.intersectObjects(pickables, false);
 
-//   pickables.forEach((p) => (p.hovered = false))
+  pickables.forEach((p) => (p.hovered = false));
 
-//   intersects.length && ((intersects[0].object as Pickable).hovered = true)
-// })
+  intersects.length && ((intersects[0].object as Pickable).hovered = true);
+});
 
 const cylinder = new Pickable(
   new CylinderGeometry(0.66, 0.66),
@@ -199,23 +206,23 @@ const cylinder = new Pickable(
 scene.add(cylinder);
 pickables.push(cylinder);
 
-// const cube = new Pickable(
-//   new BoxGeometry(),
-//   new MeshStandardMaterial({ color: 0x888888 }),
-//   new Color(0xff2200)
-// )
-// cube.position.set(-2, 0, 0)
-// scene.add(cube)
-// pickables.push(cube)
+const cube = new Pickable(
+  new BoxGeometry(),
+  new MeshStandardMaterial({ color: 0x888888 }),
+  new Color(0xff2200)
+);
+cube.position.set(-2, 0, 0);
+scene.add(cube);
+pickables.push(cube);
 
-// const pyramid = new Pickable(
-//   new TetrahedronGeometry(),
-//   new MeshStandardMaterial({ color: 0x888888 }),
-//   new Color(0x0088ff)
-// )
-// pyramid.position.set(2, 0, 0)
-// scene.add(pyramid)
-// pickables.push(pyramid)
+const pyramid = new Pickable(
+  new TetrahedronGeometry(),
+  new MeshStandardMaterial({ color: 0x888888 }),
+  new Color(0x0088ff)
+);
+pyramid.position.set(2, 0, 0);
+scene.add(pyramid);
+pickables.push(pyramid);
 
 const floor = new Mesh(new PlaneGeometry(20, 20), new MeshPhongMaterial());
 floor.rotateX(-Math.PI / 2);
