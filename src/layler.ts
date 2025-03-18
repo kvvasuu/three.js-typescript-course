@@ -19,6 +19,7 @@ import {
   Vector2,
   DirectionalLight,
   Clock,
+  TextureLoader,
 } from "three";
 import { Pallet, arrangePallets, loadModels } from "./utils";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
@@ -40,6 +41,10 @@ new RGBELoader().load(hdr, (texture) => {
   scene.backgroundBlurriness = 0.06;
   scene.environmentIntensity = 0.2;
 });
+
+const cardBoardNormalMap = new TextureLoader().load(
+  "../public/img/cardboard-normal.png"
+);
 
 const grid = new GridHelper(30, 30);
 grid.position.z = 6.8;
@@ -195,6 +200,9 @@ const createPalletObjects = () => {
           ? (pallet.material as MeshStandardMaterial).color
           : colors[index % colors.length],
         roughness: 0.5,
+        envMap: environmentTexture,
+        normalMap: cardBoardNormalMap,
+        normalScale: new Vector2(2, 2),
       });
 
       const geometry = new BoxGeometry(
