@@ -210,18 +210,27 @@ const createPalletObjects = () => {
         normalScale: new Vector2(2, 2),
       });
 
-      const frame = new Shape();
+      /* const frame = new Shape();
       frame.moveTo(0, 0);
       frame.lineTo(pallet.width, 0);
       frame.lineTo(pallet.width, pallet.height - 0.05);
       frame.lineTo(pallet.width - 0.05, pallet.height);
       frame.lineTo(0.05, pallet.height);
-      frame.lineTo(0, pallet.height - 0.05);
+      frame.lineTo(0, pallet.height - 0.05); */
+
+      const frame = new Shape();
+      frame.moveTo(0, 0);
+      frame.lineTo(pallet.width - 0.06, 0);
+      frame.lineTo(pallet.width - 0.06, pallet.height);
+      frame.lineTo(0, pallet.height);
 
       const extrudeSettings = {
         steps: 1,
-        depth: pallet.length,
-        bevelEnabled: false,
+        depth: pallet.length - 0.12,
+        bevelEnabled: true,
+        bevelSegments: 1,
+        bevelThickness: 0.04,
+        bevelSize: 0.02,
       };
 
       const geom = new ExtrudeGeometry(frame, extrudeSettings);
@@ -229,10 +238,11 @@ const createPalletObjects = () => {
       pallet.color = new Color(colors[index % colors.length]);
       pallet.geometry = geom;
       pallet.position.set(
-        pallet.position.x - pallet.width / 2,
-        pallet.position.y + 0.1,
-        pallet.position.z - pallet.length / 2
+        pallet.position.x - pallet.width / 2 + 0.03,
+        pallet.position.y + 0.124,
+        pallet.position.z - pallet.length / 2 + 0.06
       );
+
       pallet.name = `pallet_${index + 1}`;
 
       pallet.castShadow = !(pallet.material as MeshStandardMaterial).wireframe;
