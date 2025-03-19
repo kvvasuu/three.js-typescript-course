@@ -13,13 +13,15 @@ import {
   PlaneGeometry,
   MathUtils,
   Color,
-  BoxGeometry,
   Group,
   Raycaster,
   Vector2,
   DirectionalLight,
   Clock,
   TextureLoader,
+  Shape,
+  ExtrudeGeometry,
+  RepeatWrapping,
 } from "three";
 import { Pallet, arrangePallets, loadModels } from "./utils";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
@@ -43,8 +45,11 @@ new RGBELoader().load(hdr, (texture) => {
 });
 
 const cardBoardNormalMap = new TextureLoader().load(
-  "../public/img/cardboard-normal.png"
+  "/img/cardboard-normal.png"
 );
+
+cardBoardNormalMap.wrapS = RepeatWrapping;
+cardBoardNormalMap.wrapT = RepeatWrapping;
 
 const grid = new GridHelper(30, 30);
 grid.position.z = 6.8;
@@ -205,25 +210,35 @@ const createPalletObjects = () => {
         normalScale: new Vector2(2, 2),
       });
 
-      const geometry = new BoxGeometry(
-        pallet.width - 0.02,
-        pallet.height,
-        pallet.length - 0.02
-      );
+      const frame = new Shape();
+      frame.moveTo(0, 0);
+      frame.lineTo(pallet.width, 0);
+      frame.lineTo(pallet.width, pallet.height - 0.05);
+      frame.lineTo(pallet.width - 0.05, pallet.height);
+      frame.lineTo(0.05, pallet.height);
+      frame.lineTo(0, pallet.height - 0.05);
+
+      const extrudeSettings = {
+        steps: 1,
+        depth: pallet.length,
+        bevelEnabled: false,
+      };
+
+      const geom = new ExtrudeGeometry(frame, extrudeSettings);
 
       pallet.color = new Color(colors[index % colors.length]);
-      pallet.material = material;
-      pallet.geometry = geometry;
+      pallet.geometry = geom;
       pallet.position.set(
-        pallet.position.x,
-        pallet.position.y + data.palletHeight / 2 + 0.1,
-        pallet.position.z
+        pallet.position.x - pallet.width / 2,
+        pallet.position.y + 0.1,
+        pallet.position.z - pallet.length / 2
       );
       pallet.name = `pallet_${index + 1}`;
 
       pallet.castShadow = !(pallet.material as MeshStandardMaterial).wireframe;
       pallet.receiveShadow = !(pallet.material as MeshStandardMaterial)
         .wireframe;
+      pallet.material = material;
 
       const wholePallet = new Group();
       wholePallet.add(palletModel.clone());

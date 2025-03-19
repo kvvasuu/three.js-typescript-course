@@ -41,22 +41,14 @@ export class Pallet extends Mesh {
             this.color,
             delta * 10
           );
-      this.position.y = MathUtils.lerp(
-        this.position.y,
-        this.height / 2 + 0.25,
-        delta * 5
-      );
+      this.position.y = MathUtils.lerp(this.position.y, 0.25, delta * 5);
     } else {
       if (!this.clicked) {
         (this.material as MeshStandardMaterial).color.lerp(
           this.color,
           delta * 10
         );
-        this.position.y = MathUtils.lerp(
-          this.position.y,
-          this.height / 2 + 0.1,
-          delta * 5
-        );
+        this.position.y = MathUtils.lerp(this.position.y, 0.1, delta * 5);
       } else {
         (this.material as MeshStandardMaterial).color.lerp(
           this.color,
