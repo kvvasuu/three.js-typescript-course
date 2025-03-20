@@ -22,6 +22,7 @@ import {
   Shape,
   ExtrudeGeometry,
   RepeatWrapping,
+  DirectionalLightHelper,
 } from "three";
 import { Pallet, arrangePallets, loadModels } from "./utils";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
@@ -204,8 +205,7 @@ const createPalletObjects = () => {
         color: !isColorWhite
           ? (pallet.material as MeshStandardMaterial).color
           : colors[index % colors.length],
-        roughness: 0.5,
-        envMap: environmentTexture,
+        roughness: 0.8,
         normalMap: cardBoardNormalMap,
         normalScale: new Vector2(2, 2),
       });
@@ -302,10 +302,12 @@ directionalLight.position.z = -2;
 directionalLight.position.x = -2;
 
 directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = 4096;
-directionalLight.shadow.mapSize.height = 4096;
+directionalLight.shadow.mapSize.width = 512;
+directionalLight.shadow.mapSize.height = 512;
 directionalLight.shadow.camera.near = 0.5;
 directionalLight.shadow.camera.far = 500;
+directionalLight.shadow.radius = 5;
+directionalLight.shadow.blurSamples = 25;
 scene.add(directionalLight);
 
 createPalletObjects();
